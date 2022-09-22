@@ -24,6 +24,9 @@ MAP = 'l2xcon_map'
 map_path = f"{BASE_PATH}/{PACKAGE}/{PROGRAM}/{MAP}"
 map_as_array = []
 
+# this program configures the l2xcon_map map for the cross connection
+# between an ingress interface and an egress interface
+
 if not os.path.exists(map_path):
       print(f"path to {map_path} does not exist")
 else:
