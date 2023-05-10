@@ -13,7 +13,6 @@
 
 #include "hike_vm.h"
 #include "parse_helpers.h"
-//#include "paolo_kroute.h"
 
 #ifndef memset
 #define memset(dest, val, n) __builtin_memset((dest), (val), (n))
@@ -27,21 +26,22 @@
 #define memmove(dest, src, n) __builtin_memmove((dest), (src), (n))
 #endif
 
-
 #define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
 
-#define USID_BLOCK_LEN 1
-#define USID_FUNC_LEN  2
+#define HIKE_PROG_NAME paolo_adv_usid
+
+#define USID_BLOCK_LEN    4  /* 4 Bytes alias 32 bit */
+#define USID_FUNC_LEN     2  /* 2 Bytes alisa 16 bit */
 
 bpf_map(usid_params, HASH, __u32, __u32, 2);
 
-HIKE_PROG(paolo_adv_usid)
+HIKE_PROG(HIKE_PROG_NAME)
 {
 	struct pkt_info *info = hike_pcpu_shmem();
 	struct hdr_cursor *cur;
         struct in6_addr *addr;
         struct ipv6hdr *ip6h;
-	int rc;
+//	int rc;
 
         hike_pr_debug("init paolo_adv_usid");
 
@@ -67,11 +67,11 @@ HIKE_PROG(paolo_adv_usid)
 
         /* assume that DA.Argument length > 0 */
 
-        __u32 key = USID_BLOCK_LEN;
+/*        __u32 key = USID_BLOCK_LEN;
         __u32 *value;
 
-	__u32 blk_octects = 4;
-	__u32 fnc_octects = 2;
+	__u32 blk_octects = 6;
+	__u32 fnc_octects = 1;
 
         value = bpf_map_lookup_elem(&usid_params, &key);
 
@@ -81,7 +81,8 @@ HIKE_PROG(paolo_adv_usid)
         }
 
         hike_pr_debug("paolo usid_block_len: %d", *value);
-//        blk_octects = *value;
+        blk_octects = *value;
+        hike_pr_debug("paolo blk_octects: %d", blk_octects);
 
 
         key = USID_FUNC_LEN;
@@ -93,9 +94,11 @@ HIKE_PROG(paolo_adv_usid)
         }
 
         hike_pr_debug("paolo usid_func_len: %d", *value);
-//        fnc_octects = *value;
+        fnc_octects = *value;
+        hike_pr_debug("paolo func_octects: %d", fnc_octects);
+*/
 
-        addr = &ip6h->daddr;
+/*        addr = &ip6h->daddr;
 
 	__u32 arg_octects;
 	int i;
@@ -112,10 +115,33 @@ HIKE_PROG(paolo_adv_usid)
 
 
 	/* advance DA.Argument */
-	memmove(&ip6h->daddr.s6_addr[blk_octects], &ip6h->daddr.s6_addr[blk_octects + fnc_octects],
+/*	memmove(&ip6h->daddr.s6_addr[blk_octects], &ip6h->daddr.s6_addr[blk_octects + fnc_octects],
 		16 - blk_octects - fnc_octects);
 
 	memset(&addr->s6_addr[16 - fnc_octects], 0x00, fnc_octects);
+*/
+
+        addr = &ip6h->daddr;
+
+        __u32 arg_octects;
+        int i;
+        bool arg_zero = true;
+
+        arg_octects = 16 - USID_BLOCK_LEN - USID_FUNC_LEN;
+        for (i = 0; i < arg_octects; ++i) {
+                if (addr->s6_addr[USID_BLOCK_LEN + USID_FUNC_LEN + i] != 0x00)
+                        arg_zero = false;
+        }
+
+        if (arg_zero)
+              goto drop;
+
+
+        /* advance DA.Argument */
+        memmove(&ip6h->daddr.s6_addr[USID_BLOCK_LEN], &ip6h->daddr.s6_addr[USID_BLOCK_LEN + USID_FUNC_LEN],
+                arg_octects);
+
+        memset(&addr->s6_addr[16 - USID_FUNC_LEN], 0x00, USID_FUNC_LEN);
 
 
         hike_pr_debug("post paolo_adv_usid, addr");
@@ -126,7 +152,7 @@ drop:
         hike_pr_debug("DROP paolo_adv_usid");
 	return XDP_ABORTED;
 }
-EXPORT_HIKE_PROG(paolo_adv_usid);
-EXPORT_HIKE_PROG_MAP(paolo_adv_usid, usid_params);
+EXPORT_HIKE_PROG(HIKE_PROG_NAME);
+EXPORT_HIKE_PROG_MAP(HIKE_PROG_NAME, usid_params);
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
