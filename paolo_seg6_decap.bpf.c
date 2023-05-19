@@ -155,7 +155,7 @@ HIKE_PROG(HIKE_PROG_NAME)
 	if (unlikely(!eth))
 		goto drop;
 
-	/* copy the hold mac header in the new position
+	/* copy the old mac header in the new position
          * the two headers do not overlap with each other
          */
 	memcpy(eth, old_eth, sizeof(*eth));
