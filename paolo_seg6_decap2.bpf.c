@@ -65,6 +65,8 @@ static __always_inline int handle_srh(struct xdp_md *ctx, struct hdr_cursor *cur
 	        return -EINVAL;
 	}
 
+        hike_pr_debug("(srh->hdrlen + 1 << 3): %d \n", ((srh->hdrlen + 1) << 3));
+
 	*srh_len = (srh->hdrlen + 1) << 3;
 	if (unlikely(srh_minlen > *srh_len)) {
 	        hike_pr_err("invalid SRH length");
@@ -76,7 +78,7 @@ static __always_inline int handle_srh(struct xdp_md *ctx, struct hdr_cursor *cur
 	        return -EINVAL;
         }
 
-        hike_pr_debug("srh_len: %d \n", srh_len);
+        hike_pr_debug("srh_len: %d \n", *srh_len);
         *nexthdr = srh->nexthdr;
 
         return 0;
@@ -192,6 +194,8 @@ HIKE_PROG(HIKE_PROG_NAME)
         nexthdr = ip6h->nexthdr;
 
         if (nexthdr == NEXTHDR_ROUTING) {
+                hike_pr_debug("#### enter in SRH path ####");
+
                 /* Validate the SRH and check if the Segment Left is zero.
                  * Compute the header offset and retrive the nexthdr id.
                  * Its assumes the next header is the inner packet.
@@ -210,7 +214,10 @@ HIKE_PROG(HIKE_PROG_NAME)
 
                 /* add to delta offeset the SRH lenght */
                 deltaoff += srh_len;
-        } else if (nexthdr == NEXTHDR_IPV4) {
+        }
+
+        if (nexthdr == NEXTHDR_IPV4) {
+                hike_pr_debug("#### enter in IPv4 path ####");
                 /* convert the ipproto id to ethernet ethertype */
                 protocol = nxthdr_to_ethproto(nexthdr);
 		if (unlikely(protocol < 0)) {
@@ -228,8 +235,9 @@ HIKE_PROG(HIKE_PROG_NAME)
                 __cur_set_header_off(cur, nhoff, cur->nhoff + deltaoff);
 
                 /* unset the trasport header offset (not used in L3 context) */
-                //cur_transport_header_unset(cur);
+                cur_transport_header_unset(cur);
         } else if (nexthdr == NEXTHDR_IPV6) {
+                hike_pr_debug("#### enter in IPv6 path ####");
                 /* convert the ipproto id to ethernet ethertype */
                 protocol = nxthdr_to_ethproto(nexthdr);
 		if (unlikely(protocol < 0)) {
@@ -247,8 +255,9 @@ HIKE_PROG(HIKE_PROG_NAME)
                 __cur_set_header_off(cur, nhoff, cur->nhoff + deltaoff);
 
                 /* unset the trasport header offset (not used in L3 context) */
-                //cur_transport_header_unset(cur);
+                cur_transport_header_unset(cur);
         } else if (nexthdr == NEXTHDR_ETHERNET) {
+                hike_pr_debug("#### enter in ETHERNET path ####");
                 /* points the cur->mhoff to the start of inner header */
                 __cur_set_header_off(cur, mhoff, cur->nhoff + deltaoff);
 
@@ -256,7 +265,7 @@ HIKE_PROG(HIKE_PROG_NAME)
                 __cur_set_header_off(cur, nhoff, cur->mhoff + sizeof(struct ethhdr));
 
                 /* unset the trasport header offset (not used in L3 context) */
-                //cur_transport_header_unset(cur);
+                cur_transport_header_unset(cur);
         } else {
                 hike_pr_err("invalid inner packet <%x>", nexthdr);
                 goto drop;
