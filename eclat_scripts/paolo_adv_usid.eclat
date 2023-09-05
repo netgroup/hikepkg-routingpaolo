@@ -1,40 +1,25 @@
-# route basic example
+# SRv6 Advance uSID example
 #
-# (route_basic_example.eclat)
+# (paolo_adv_usid.eclat)
 #
-# routes an IPv6 packet with a lookup in the kernel routing table
-# using the ip6_kroute HIKe program
+# Advances the uSID on an IPv6 packet with a lookup in the kernel routing table
+# using the paolo_kroute HIKe program
 
-#from programs.mynet import hike_drop, hike_pass, monitor, show_pkt_info
-from programs.hike_default import hike_drop, hike_pass, monitor
-from programs.info import show_pkt_info
-from programs.routingpaolo import paolo_kroute, paolo_chaddr, paolo_adv_usid
-from programs.eip import hello
+#import the HIKe programs
+from programs.routingpaolo import paolo_ip6_dst_filter, paolo_adv_usid, paolo_kroute
 from loaders.hike_default import ip6_simple_classifier
-#from loaders.hike_default import minimal_classifier
 
 # send all IPv6 packets to our chain
-ip6_simple_classifier[ipv6_simple_classifier_map] = { (0): (testpaolo) }
+ip6_simple_classifier[ipv6_simple_classifier_map] = { (0): (adv_usid) }
 ip6_simple_classifier.attach('DEVNAME', 'xdp')
-#minimal_classifier[map_ipv6] = { (0xFC010000000000000000000000000003): (testpaolo) }
-#minimal_classifier.attach('DEVNAME', 'xdp')
 
-#paolo_adv_usid[usid_params] = { (2): (2) }
+#eCLAT chian
+def adv_usid():
 
-def testpaolo():
-
-    LAYER_2=1; NET_LAYER=2; TRANSP_LAYER=4
-
-    u64 : myvar = 2023
-    show_pkt_info(TRANSP_LAYER, myvar)
-
-    hello()
-
-    paolo_chaddr()
+    paolo_ip6_dst_filter()
 
     paolo_adv_usid()
 
     paolo_kroute()
 
-#    hike_pass()
     return 0
