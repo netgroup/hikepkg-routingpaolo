@@ -15,7 +15,7 @@
 #include "parse_helpers.h"
 #include "paolo_kroute.h"
 
-#define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
+//#define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
 
 #define HIKE_PROG_NAME paolo_ip6_dst_filter
 #define HIKE_MAPS_NAME ip6_dst
@@ -36,8 +36,6 @@ HIKE_PROG(HIKE_PROG_NAME)
         __be16 key = 0;
 	//int rc;
 
-        hike_pr_debug("init paolo_ip6_dst_filter");
-
 	if (unlikely(!info))
 		goto drop;
 
@@ -45,8 +43,6 @@ HIKE_PROG(HIKE_PROG_NAME)
 	 * the HIKe per-cpu shared memory
 	 */
 	cur = pkt_info_cur(info);
-
-        hike_pr_debug("pre paolo_ip6_dst_filter");
 
         ip6h = (struct ipv6hdr *)cur_header_pointer(ctx, cur, cur->nhoff, sizeof(*ip6h));
 
@@ -78,17 +74,7 @@ HIKE_PROG(HIKE_PROG_NAME)
 
         return HIKE_XDP_VM;
 
-
-//	if (memcmp(&ip6h->daddr, daddr, sizeof(ip6h->daddr)) != 0)
-//            return HIKE_XDP_VM;
-//        else
-//            return XDP_PASS;
-
-        hike_pr_debug("post paolo_ip6_dst_filter");
-
-
 drop:
-        hike_pr_debug("DROP paolo_ip6_dst_filter");
 	return XDP_ABORTED;
 }
 EXPORT_HIKE_PROG(HIKE_PROG_NAME);

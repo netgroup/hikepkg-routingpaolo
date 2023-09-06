@@ -15,7 +15,7 @@
 #include "parse_helpers.h"
 #include "paolo_kroute.h"
 
-#define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
+//#define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
 
 #define HIKE_PROG_NAME paolo_seg6_end
 
@@ -31,8 +31,6 @@ HIKE_PROG(HIKE_PROG_NAME)
 	int srhoff = -EINVAL;
 	int rc;
 
-        hike_pr_debug("init paolo_seg6_end");
-
 	if (unlikely(!info))
 		goto drop;
 
@@ -40,8 +38,6 @@ HIKE_PROG(HIKE_PROG_NAME)
 	 * the HIKe per-cpu shared memory
 	 */
 	cur = pkt_info_cur(info);
-
-        hike_pr_debug("pre paolo_seg6_end");
 
         ip6h = (struct ipv6hdr *)cur_header_pointer(ctx, cur, cur->nhoff, sizeof(*ip6h));
 
@@ -91,12 +87,9 @@ HIKE_PROG(HIKE_PROG_NAME)
 */
         ip6h->daddr = *daddr;
 
-        hike_pr_debug("post paolo_seg6_end, OK");
-
 	return HIKE_XDP_VM;
 
 drop:
-        hike_pr_debug("DROP paolo_seg6_end");
 	return XDP_ABORTED;
 }
 EXPORT_HIKE_PROG(HIKE_PROG_NAME);

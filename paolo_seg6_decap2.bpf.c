@@ -15,7 +15,7 @@
 #include "parse_helpers.h"
 #include "paolo_kroute.h"
 
-#define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
+//#define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
 
 #define HIKE_PROG_NAME paolo_seg6_decap2
 
@@ -40,13 +40,13 @@
 
 #define NEXTHDR_ETHERNET 143
 
-static __always_inline void show_cur_info(const struct hdr_cursor *cur)
+/*static __always_inline void show_cur_info(const struct hdr_cursor *cur)
 {
     hike_pr_debug("dataoff=%d", cur->dataoff);
     hike_pr_debug("mhoff=%d", cur->mhoff);
     hike_pr_debug("nhoff=%d", cur->nhoff);
     hike_pr_debug("thoff=%d", cur->thoff);
-}
+}*/
 
 static __always_inline int handle_srh(struct xdp_md *ctx, struct hdr_cursor *cur,
                                       struct ipv6_sr_hdr *srh, int srhoff,
@@ -55,30 +55,27 @@ static __always_inline int handle_srh(struct xdp_md *ctx, struct hdr_cursor *cur
         int srh_minlen = -EINVAL;
 
         /* we are looking for an SRH with at least one sid.
-    * The first sid in the sidlist is the last one ;-)
-    */
+        * The first sid in the sidlist is the last one ;-)
+        */
         srh_minlen = sizeof(*srh) + sizeof(srh->segments[0]);
-    srh = (struct ipv6_sr_hdr *)cur_header_pointer(ctx, cur, srhoff,
-                               srh_minlen);
-    if (unlikely(!srh)) {
-            hike_pr_err("SRH must contain one SID at least");
-            return -EINVAL;
-    }
+        srh = (struct ipv6_sr_hdr *)cur_header_pointer(ctx, cur, srhoff,
+                                   srh_minlen);
+        if (unlikely(!srh)) {
+                hike_pr_err("SRH must contain one SID at least");
+                return -EINVAL;
+        }
 
-        hike_pr_debug("(srh->hdrlen + 1 << 3): %d \n", ((srh->hdrlen + 1) << 3));
-
-    *srh_len = (srh->hdrlen + 1) << 3;
-    if (unlikely(srh_minlen > *srh_len)) {
-            hike_pr_err("invalid SRH length");
-            return -EINVAL;
+        *srh_len = (srh->hdrlen + 1) << 3;
+        if (unlikely(srh_minlen > *srh_len)) {
+                hike_pr_err("invalid SRH length");
+                return -EINVAL;
         }
 
         if (srh->segments_left > 0) {
                 hike_pr_err("Segment Left is not zero");
-            return -EINVAL;
+                return -EINVAL;
         }
 
-        hike_pr_debug("srh_len: %d \n", *srh_len);
         *nexthdr = srh->nexthdr;
 
         return 0;
@@ -90,32 +87,32 @@ static __always_inline int adjust_mac_header(struct xdp_md *ctx, struct hdr_curs
         struct ethhdr *old_eth, *eth;
         unsigned int maclen;
 
-    maclen = cur->nhoff - cur->mhoff;
-    if (unlikely(maclen != sizeof(struct ethhdr))) {
-        hike_pr_crit("VLAN not yet supported in ethernet header");
+        maclen = cur->nhoff - cur->mhoff;
+        if (unlikely(maclen != sizeof(struct ethhdr))) {
+            hike_pr_crit("VLAN not yet supported in ethernet header");
             return -EINVAL;
-    }
+        }
 
         /* retrive the actual mac header */
-    old_eth = get_ethhdr(ctx, cur->mhoff);
-    if (unlikely(!old_eth)) {
-        hike_pr_err("cannot access to ethernet header");
+        old_eth = get_ethhdr(ctx, cur->mhoff);
+        if (unlikely(!old_eth)) {
+            hike_pr_err("cannot access to ethernet header");
             return -EINVAL;
-    }
+        }
 
         /* points the cur->dataoff to the new position of mac header */
         __cur_set_header_off(cur, dataoff, cur->mhoff + delta);
 
         /* points to the new position of mac header */
-    eth = get_ethhdr(ctx, cur->dataoff);
-    if (unlikely(!eth))
+        eth = get_ethhdr(ctx, cur->dataoff);
+        if (unlikely(!eth))
             return -EINVAL;
 
-    /* copy the old mac header in the new position
+        /* copy the old mac header in the new position
          * the two headers do not overlap with each other
          */
-    memcpy(eth, old_eth, sizeof(*eth));
-    eth->h_proto = bpf_ntohs(protocol);
+        memcpy(eth, old_eth, sizeof(*eth));
+        eth->h_proto = bpf_ntohs(protocol);
 
         /* points the cur->mhoff to the new position of mac header */
         __cur_set_header_off(cur, mhoff, cur->dataoff);
@@ -155,8 +152,6 @@ HIKE_PROG(HIKE_PROG_NAME)
     int rc;
 
 
-    hike_pr_debug("init paolo_seg6_decap");
-
     if (unlikely(!info))
         goto drop;
 
@@ -164,8 +159,6 @@ HIKE_PROG(HIKE_PROG_NAME)
      * the HIKe per-cpu shared memory
      */
     cur = pkt_info_cur(info);
-
-    hike_pr_debug("pre paolo_seg6_decap");
 
     ip6h = (struct ipv6hdr *)cur_header_pointer(ctx, cur, cur->nhoff, sizeof(*ip6h));
 
@@ -176,8 +169,7 @@ HIKE_PROG(HIKE_PROG_NAME)
         /* we let the kernel decide what to do in this situation */
         return XDP_PASS;
 
-    hike_pr_debug("#### cursor pre find next header ####");
-    show_cur_info(cur);
+//    show_cur_info(cur);
 
     /* add to delta offset the IPv6 header size */
     deltaoff = sizeof(struct ipv6hdr);
@@ -189,13 +181,9 @@ HIKE_PROG(HIKE_PROG_NAME)
         goto drop;
     }
 
-    hike_pr_debug("ipv6_find_hdr: protocol <%d>, offset: %d", ip6h->nexthdr, offset);
-
     nexthdr = ip6h->nexthdr;
 
     if (nexthdr == NEXTHDR_ROUTING) {
-        hike_pr_debug("#### enter in SRH path ####");
-
         /* Validate the SRH and check if the Segment Left is zero.
          * Compute the header offset and retrive the nexthdr id.
          * Its assumes the next header is the inner packet.
@@ -217,7 +205,6 @@ HIKE_PROG(HIKE_PROG_NAME)
     }
 
     if (nexthdr == NEXTHDR_IPV4) {
-        hike_pr_debug("#### enter in IPv4 path ####");
         /* convert the ipproto id to ethernet ethertype */
         protocol = nxthdr_to_ethproto(nexthdr);
         if (unlikely(protocol < 0)) {
@@ -238,7 +225,6 @@ HIKE_PROG(HIKE_PROG_NAME)
         cur_transport_header_unset(cur);
 
     } else if (nexthdr == NEXTHDR_IPV6) {
-        hike_pr_debug("#### enter in IPv6 path ####");
         /* convert the ipproto id to ethernet ethertype */
         protocol = nxthdr_to_ethproto(nexthdr);
         if (unlikely(protocol < 0)) {
@@ -259,7 +245,6 @@ HIKE_PROG(HIKE_PROG_NAME)
         cur_transport_header_unset(cur);
 
     } else if (nexthdr == NEXTHDR_ETHERNET) {
-        hike_pr_debug("#### enter in ETHERNET path ####");
         /* points the cur->mhoff to the start of inner header */
         __cur_set_header_off(cur, mhoff, cur->nhoff + deltaoff);
 
@@ -274,47 +259,25 @@ HIKE_PROG(HIKE_PROG_NAME)
     }
 
 
-    hike_pr_debug("#### cursor post find next header ####");
-    show_cur_info(cur);
-    hike_pr_debug("deltaoff: %d", deltaoff);
-    hike_pr_debug("srh_len: %d", srh_len);
-
+//    show_cur_info(cur);
 
     /* reduce the xdp frame */
     rc = cur_xdp_reduce_head(ctx, cur, deltaoff);
-    //rc = bpf_xdp_adjust_head(ctx, tot_len);
     if (unlikely(rc)) {
         hike_pr_err("cannot reduce the xdp frame correctly");
         goto drop;
     }
 
-    hike_pr_debug("#### cursor post xdp reduce ####");
-    show_cur_info(cur);
-
-    /* set the cur->dataoff to the beginning of the frame */
-    //__pull(cur, 0 - dataoff);
-
-    /* set the cur->mhoff to the beginning of the frame */
-    //cur_reset_mac_header(cur);
-
-    /* set the cur->nhoff after the mac header */
-    //__cur_set_header_off(cur, nhoff, cur->mhoff + maclen);
+//    show_cur_info(cur);
 
     /* points the cur->dataoff to the network header offset*/
     __cur_set_header_off(cur, dataoff, cur->nhoff);
 
-    /* unset the trasport header offset (not used in L3 context) */
-    //cur_transport_header_unset(cur);
-
-    hike_pr_debug("#### cursor final pre exit ####");
-    show_cur_info(cur);
-
-    hike_pr_debug("post paolo_seg6_decap, OK");
+//    show_cur_info(cur);
 
     return HIKE_XDP_VM;
 
 drop:
-    hike_pr_debug("DROP paolo_seg6_decap");
     return XDP_ABORTED;
 }
 EXPORT_HIKE_PROG(HIKE_PROG_NAME);

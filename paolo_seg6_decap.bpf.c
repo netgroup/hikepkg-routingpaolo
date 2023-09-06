@@ -15,7 +15,7 @@
 #include "parse_helpers.h"
 #include "paolo_kroute.h"
 
-#define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
+//#define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
 
 #define HIKE_PROG_NAME paolo_seg6_decap
 
@@ -41,13 +41,13 @@
 #define memcpy(dest, src, n) __builtin_memcpy((dest), (src), (n))
 #endif
 
-static __always_inline void show_cur_info(const struct hdr_cursor *cur)
+/*static __always_inline void show_cur_info(const struct hdr_cursor *cur)
 {
 	hike_pr_debug("dataoff=%d", cur->dataoff);
 	hike_pr_debug("mhoff=%d", cur->mhoff);
 	hike_pr_debug("nhoff=%d", cur->nhoff);
 	hike_pr_debug("thoff=%d", cur->thoff);
-}
+}*/
 
 
 HIKE_PROG(HIKE_PROG_NAME)
@@ -67,8 +67,6 @@ HIKE_PROG(HIKE_PROG_NAME)
         struct ethhdr *old_eth, *eth;
 
 
-        hike_pr_debug("init paolo_seg6_decap");
-
 	if (unlikely(!info))
 		goto drop;
 
@@ -76,8 +74,6 @@ HIKE_PROG(HIKE_PROG_NAME)
 	 * the HIKe per-cpu shared memory
 	 */
 	cur = pkt_info_cur(info);
-
-        hike_pr_debug("pre paolo_seg6_decap");
 
         ip6h = (struct ipv6hdr *)cur_header_pointer(ctx, cur, cur->nhoff, sizeof(*ip6h));
 
@@ -161,9 +157,7 @@ HIKE_PROG(HIKE_PROG_NAME)
 	memcpy(eth, old_eth, sizeof(*eth));
 	eth->h_proto = bpf_ntohs(protocol);
 
-        show_cur_info(cur);
-        hike_pr_debug("tot_len: %d", tot_len);
-        hike_pr_debug("srh_len: %d \n", srh_len);
+//        show_cur_info(cur);
 
 
 	/* reduce the xdp frame */
@@ -189,14 +183,11 @@ HIKE_PROG(HIKE_PROG_NAME)
         /* unset the trasport header offset (not used in L3 context) */
         cur_transport_header_unset(cur);
 
-        show_cur_info(cur);
-
-        hike_pr_debug("post paolo_seg6_decap, OK");
+//        show_cur_info(cur);
 
 	return HIKE_XDP_VM;
 
 drop:
-        hike_pr_debug("DROP paolo_seg6_decap");
 	return XDP_ABORTED;
 }
 EXPORT_HIKE_PROG(HIKE_PROG_NAME);

@@ -80,11 +80,8 @@ __seg6_end(struct xdp_md *ctx, struct hdr_cursor *cur)
 
         ip6h->daddr = *daddr;
 
-        hike_pr_debug("post paolo_seg6_end, OK");
-
         return HIKE_XDP_VM;
 
 drop:
-        hike_pr_debug("DROP paolo_seg6_end");
         return XDP_ABORTED;
 }

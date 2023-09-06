@@ -2,9 +2,9 @@
 
 #define HIKE_PROG_NAME sr6_encap
 
-#ifndef HIKE_PRINT_LEVEL
-#define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
-#endif
+//#ifndef HIKE_PRINT_LEVEL
+//#define HIKE_PRINT_LEVEL HIKE_PRINT_LEVEL_DEBUG
+//#endif
 
 #include <stddef.h>
 #include <linux/in.h>
