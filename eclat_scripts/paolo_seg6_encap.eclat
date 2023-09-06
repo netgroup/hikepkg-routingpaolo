@@ -5,7 +5,7 @@
 # Encaps an IPv6 packet into an outter IPv6+SRH packet with a lookup in the
 # kernel routing table using the ip6_kroute HIKe program
 
-from programs.routingpaolo import sr6_encap paolo_kroute, paolo_ip6_dst_filter 
+from programs.routingpaolo import sr6_encap, paolo_kroute, paolo_ip6_dst_filter 
 from loaders.hike_default import ip6_simple_classifier
 
 # send all IPv6 packets to our chain
